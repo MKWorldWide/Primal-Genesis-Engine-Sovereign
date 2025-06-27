@@ -65,6 +65,7 @@ import uvicorn
 # Import AthenaMist core modules
 from core.ai_integration import AIIntegrationManager, configure_ai_provider
 from core.sam_integration import SAMIntegration, AthenaMistSAMIntegration
+from core.primal_sovereign_integration import PrimalSovereignManager, VoiceCommandType, ProcessingStatus
 
 class ChatMessage(BaseModel):
     """Chat message model for API validation"""
@@ -79,6 +80,13 @@ class SystemStatus(BaseModel):
     ai_provider: str
     sam_status: str
     performance_metrics: Dict[str, Any]
+
+class VoiceCommand(BaseModel):
+    """Voice command model for Primal Sovereign Core integration"""
+    content: str = Field(..., min_length=1, max_length=10000)
+    command_type: str = Field(default="general", regex="^(general|system|optimization|analytics|sovereign|queen_command)$")
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
 
 class WebSocketManager:
     """
@@ -176,6 +184,9 @@ class AthenaMistWebApp:
         self.sam_ai = AthenaMistSAMIntegration(self.sam_integration)
         self.websocket_manager = WebSocketManager()
         
+        # Initialize Primal Sovereign Core integration
+        self.sovereign_manager = PrimalSovereignManager(self.ai_manager.config, self.ai_manager)
+        
         # Setup templates and static files
         self.templates = Jinja2Templates(directory="templates")
         self.setup_routes()
@@ -270,19 +281,94 @@ class AthenaMistWebApp:
         
         @self.app.get("/api/sam/opportunities")
         async def sam_opportunities(keywords: str = None, limit: int = 10):
-            """Get government contract opportunities"""
+            """Get SAM government opportunities"""
             try:
-                results = await self.sam_integration.get_contract_opportunities(
-                    keywords=keywords,
-                    limit=limit
-                )
-                return {
-                    "opportunities": results,
-                    "keywords": keywords,
-                    "timestamp": datetime.now().isoformat()
-                }
+                opportunities = await self.sam_ai.get_opportunities(keywords, limit)
+                return JSONResponse(content={
+                    "status": "success",
+                    "opportunities": opportunities,
+                    "count": len(opportunities)
+                })
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Opportunities search failed: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to fetch opportunities: {str(e)}")
+        
+        @self.app.post("/api/voice/process")
+        async def process_voice_command(voice_command: VoiceCommand):
+            """Process voice command with Primal Sovereign Core"""
+            try:
+                command_type = VoiceCommandType(voice_command.command_type)
+                result = await self.sovereign_manager.process_voice_command(
+                    voice_command.content, 
+                    command_type
+                )
+                
+                return JSONResponse(content={
+                    "status": "success",
+                    "command_id": result.command_id,
+                    "response": result.response,
+                    "processing_time": result.processing_time,
+                    "optimization_score": result.optimization_score,
+                    "learning_iterations": result.learning_iterations,
+                    "self_healing_attempts": result.self_healing_attempts,
+                    "aws_optimizations": result.aws_optimizations,
+                    "sovereign_insights": result.sovereign_insights
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to process voice command: {str(e)}")
+
+        @self.app.get("/api/voice/status")
+        async def get_voice_status():
+            """Get Primal Sovereign Core voice processing status"""
+            try:
+                return JSONResponse(content={
+                    "status": "success",
+                    "voice_processing_active": self.sovereign_manager.voice_processing_active,
+                    "aws_monitoring_active": self.sovereign_manager.aws_monitoring_active,
+                    "sovereign_learning_active": self.sovereign_manager.sovereign_learning_active,
+                    "command_history_count": len(self.sovereign_manager.command_history),
+                    "optimization_history_count": len(self.sovereign_manager.optimization_history)
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to get voice status: {str(e)}")
+
+        @self.app.post("/api/voice/start")
+        async def start_voice_processing():
+            """Start Primal Sovereign Core voice processing"""
+            try:
+                await self.sovereign_manager.start_voice_processing()
+                return JSONResponse(content={
+                    "status": "success",
+                    "message": "Voice processing started successfully"
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to start voice processing: {str(e)}")
+
+        @self.app.post("/api/voice/stop")
+        async def stop_voice_processing():
+            """Stop Primal Sovereign Core voice processing"""
+            try:
+                await self.sovereign_manager.stop_voice_processing()
+                return JSONResponse(content={
+                    "status": "success",
+                    "message": "Voice processing stopped successfully"
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to stop voice processing: {str(e)}")
+
+        @self.app.get("/api/voice/report")
+        async def generate_voice_report():
+            """Generate Primal Sovereign Core report"""
+            try:
+                report_path = await self.sovereign_manager.generate_sovereign_report(
+                    self.sovereign_manager.command_history
+                )
+                return JSONResponse(content={
+                    "status": "success",
+                    "report_path": report_path,
+                    "message": "Sovereign report generated successfully"
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
         
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
