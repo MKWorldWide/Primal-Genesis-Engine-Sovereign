@@ -7,6 +7,7 @@ This package provides comprehensive integration modules for:
 - LilithOSi Integration (iOS firmware development)
 - Phantom Integration (Security scanning and reconnaissance)
 - Primal Sovereign Core Integration (Voice processing and AWS optimization)
+- Shadow Nexus Integration (Forex trading, data retrieval, and command network)
 
 Author: AthenaMist-Blended Team
 Version: 2.0
@@ -17,6 +18,7 @@ from .ai_integration import AIIntegrationManager
 from .lilithos_integration import LilithOSiManager
 from .phantom_integration import PhantomManager
 from .primal_sovereign_integration import PrimalSovereignManager, VoiceCommandType, ProcessingStatus
+from .shadow_nexus_integration import ShadowNexusManager, TradingSignalType, OperationStatus, CommandPlatform
 
 __all__ = [
     'AIIntegrationManager',
@@ -24,7 +26,11 @@ __all__ = [
     'PhantomManager',
     'PrimalSovereignManager',
     'VoiceCommandType',
-    'ProcessingStatus'
+    'ProcessingStatus',
+    'ShadowNexusManager',
+    'TradingSignalType',
+    'OperationStatus',
+    'CommandPlatform'
 ]
 
 __version__ = "2.0"

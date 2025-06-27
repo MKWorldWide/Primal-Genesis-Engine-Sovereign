@@ -66,6 +66,7 @@ import uvicorn
 from core.ai_integration import AIIntegrationManager, configure_ai_provider
 from core.sam_integration import SAMIntegration, AthenaMistSAMIntegration
 from core.primal_sovereign_integration import PrimalSovereignManager, VoiceCommandType, ProcessingStatus
+from core.shadow_nexus_integration import ShadowNexusManager, TradingSignalType, OperationStatus, CommandPlatform
 
 class ChatMessage(BaseModel):
     """Chat message model for API validation"""
@@ -87,6 +88,31 @@ class VoiceCommand(BaseModel):
     command_type: str = Field(default="general", regex="^(general|system|optimization|analytics|sovereign|queen_command)$")
     user_id: Optional[str] = None
     session_id: Optional[str] = None
+
+class TradingSignal(BaseModel):
+    """Trading signal model for Shadow Nexus integration"""
+    symbol: str = Field(..., min_length=1, max_length=10)
+    direction: str = Field(..., regex="^(long|short|scalp|swing|breakout)$")
+    entry_price: float = Field(..., gt=0)
+    stop_loss: float = Field(..., gt=0)
+    take_profit: float = Field(..., gt=0)
+    confidence: float = Field(..., ge=0, le=1)
+    ichimoku_data: Dict[str, Any] = Field(default_factory=dict)
+    sentiment_score: Optional[float] = Field(None, ge=-1, le=1)
+
+class DataRetrieval(BaseModel):
+    """Data retrieval model for Shadow Nexus integration"""
+    target_url: str = Field(..., min_length=1)
+    operation_type: str = Field(default="surveillance", regex="^(surveillance|intelligence|monitoring)$")
+
+class CommandMessage(BaseModel):
+    """Command message model for Shadow Nexus integration"""
+    platform: str = Field(..., regex="^(discord|telegram|email|webhook)$")
+    content: str = Field(..., min_length=1, max_length=10000)
+    user_id: Optional[str] = None
+    channel_id: Optional[str] = None
+    priority: str = Field(default="normal", regex="^(low|normal|high|urgent)$")
+    encrypted: bool = Field(default=False)
 
 class WebSocketManager:
     """
@@ -186,6 +212,9 @@ class AthenaMistWebApp:
         
         # Initialize Primal Sovereign Core integration
         self.sovereign_manager = PrimalSovereignManager(self.ai_manager.config, self.ai_manager)
+        
+        # Initialize Shadow Nexus integration
+        self.shadow_manager = ShadowNexusManager(self.ai_manager.config, self.ai_manager)
         
         # Setup templates and static files
         self.templates = Jinja2Templates(directory="templates")
@@ -369,7 +398,136 @@ class AthenaMistWebApp:
                 })
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
-        
+
+        @self.app.post("/api/shadow/trading")
+        async def process_trading_signal(trading_signal: TradingSignal):
+            """Process trading signal with Shadow Nexus"""
+            try:
+                signal_data = {
+                    "symbol": trading_signal.symbol,
+                    "direction": trading_signal.direction,
+                    "entry_price": trading_signal.entry_price,
+                    "stop_loss": trading_signal.stop_loss,
+                    "take_profit": trading_signal.take_profit,
+                    "confidence": trading_signal.confidence,
+                    "ichimoku_data": trading_signal.ichimoku_data,
+                    "sentiment_score": trading_signal.sentiment_score
+                }
+                
+                result = await self.shadow_manager.process_trading_signal(signal_data)
+                
+                return JSONResponse(content={
+                    "status": "success",
+                    "operation_id": result.operation_id,
+                    "status": result.status.value,
+                    "processing_time": result.processing_time,
+                    "ai_enhancement_score": result.ai_enhancement_score,
+                    "security_level": result.security_level,
+                    "result": result.result
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to process trading signal: {str(e)}")
+
+        @self.app.post("/api/shadow/retrieval")
+        async def execute_data_retrieval(data_retrieval: DataRetrieval):
+            """Execute data retrieval with Shadow Nexus"""
+            try:
+                result = await self.shadow_manager.execute_data_retrieval(
+                    data_retrieval.target_url,
+                    data_retrieval.operation_type
+                )
+                
+                return JSONResponse(content={
+                    "status": "success",
+                    "operation_id": result.operation_id,
+                    "status": result.status.value,
+                    "processing_time": result.processing_time,
+                    "ai_enhancement_score": result.ai_enhancement_score,
+                    "security_level": result.security_level,
+                    "result": result.result
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to execute data retrieval: {str(e)}")
+
+        @self.app.post("/api/shadow/command")
+        async def process_command_message(command_message: CommandMessage):
+            """Process command message with Shadow Nexus"""
+            try:
+                message_data = {
+                    "platform": command_message.platform,
+                    "content": command_message.content,
+                    "user_id": command_message.user_id,
+                    "channel_id": command_message.channel_id,
+                    "priority": command_message.priority,
+                    "encrypted": command_message.encrypted
+                }
+                
+                result = await self.shadow_manager.process_command_message(message_data)
+                
+                return JSONResponse(content={
+                    "status": "success",
+                    "operation_id": result.operation_id,
+                    "status": result.status.value,
+                    "processing_time": result.processing_time,
+                    "ai_enhancement_score": result.ai_enhancement_score,
+                    "security_level": result.security_level,
+                    "result": result.result
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to process command message: {str(e)}")
+
+        @self.app.get("/api/shadow/status")
+        async def get_shadow_status():
+            """Get Shadow Nexus status"""
+            try:
+                return JSONResponse(content={
+                    "status": "success",
+                    "trading_active": self.shadow_manager.trading_active,
+                    "surveillance_active": self.shadow_manager.surveillance_active,
+                    "command_network_active": self.shadow_manager.command_network_active,
+                    "operation_history_count": len(self.shadow_manager.operation_history),
+                    "trading_history_count": len(self.shadow_manager.trading_history)
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to get shadow status: {str(e)}")
+
+        @self.app.post("/api/shadow/start")
+        async def start_shadow_operations():
+            """Start Shadow Nexus operations"""
+            try:
+                await self.shadow_manager.start_shadow_operations()
+                return JSONResponse(content={
+                    "status": "success",
+                    "message": "Shadow Nexus operations started successfully"
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to start shadow operations: {str(e)}")
+
+        @self.app.post("/api/shadow/stop")
+        async def stop_shadow_operations():
+            """Stop Shadow Nexus operations"""
+            try:
+                await self.shadow_manager.stop_shadow_operations()
+                return JSONResponse(content={
+                    "status": "success",
+                    "message": "Shadow Nexus operations stopped successfully"
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to stop shadow operations: {str(e)}")
+
+        @self.app.get("/api/shadow/report")
+        async def generate_shadow_report():
+            """Generate Shadow Nexus report"""
+            try:
+                report_path = await self.shadow_manager.generate_shadow_report()
+                return JSONResponse(content={
+                    "status": "success",
+                    "report_path": report_path,
+                    "message": "Shadow Nexus report generated successfully"
+                })
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to generate shadow report: {str(e)}")
+
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
             """WebSocket endpoint for real-time communication"""
