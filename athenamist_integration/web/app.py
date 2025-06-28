@@ -73,8 +73,8 @@ from core.sam_integration import SAMIntegration, AthenaMistSAMIntegration
 class ChatMessage(BaseModel):
     """Chat message model for API validation"""
     message: str = Field(..., min_length=1, max_length=10000)
-    mode: str = Field(default="creative", regex="^(creative|technical|workflow|government)$")
-    provider: str = Field(default="mistral", regex="^(mistral|openai|claude|gemini|cohere|deepseek)$")
+    mode: str = Field(default="creative", pattern="^(creative|technical|workflow|government)$")
+    provider: str = Field(default="mistral", pattern="^(mistral|openai|claude|gemini|cohere|deepseek)$")
 
 class SystemStatus(BaseModel):
     """System status model for API responses"""
